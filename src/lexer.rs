@@ -24,6 +24,11 @@ impl Lexer {
     fn next_char(&mut self) -> char {
         let current = &self.current();
         self.position += 1;
+        self.column += 1;
+        if current == &'\n' {
+            self.line += 1;
+            self.column = 1;
+        }
         *current
     }
 
