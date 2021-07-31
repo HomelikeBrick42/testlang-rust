@@ -16,7 +16,7 @@ pub struct AstFile {
     pub parent_data: ParentData,
     pub file_path: String,
     pub source: String,
-    pub scope: AstScope,
+    pub scope: Rc<RefCell<AstScope>>,
 }
 
 #[derive(Clone, Debug)]
@@ -64,7 +64,7 @@ pub struct AstProcedure {
     pub parent_data: ParentData,
     pub arguments: Vec<Rc<RefCell<AstDeclaration>>>,
     pub return_type: Rc<RefCell<Option<AstType>>>,
-    pub scope: AstScope,
+    pub scope: Rc<RefCell<AstScope>>,
 }
 
 #[derive(Clone, Debug)]

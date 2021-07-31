@@ -27,36 +27,43 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Ast {
-        Ast::File(Rc::new(RefCell::new(self.parse_file())))
+        Ast::File(self.parse_file((Option::None, Option::None)))
     }
 
-    fn parse_file(&mut self) -> AstFile {
-        let mut statements = Vec::new();
-
-        while self.current.kind != TokenKind::EndOfFile {
-            statements.push(Rc::new(RefCell::new(self.parse_statement())));
-        }
-
-        AstFile {
-            parent_data: (Option::None, Option::None),
+    fn parse_file(&mut self, parent_data: ParentData) -> Rc<RefCell<AstFile>> {
+        let file = Rc::new(RefCell::new(AstFile {
+            parent_data: parent_data.clone(),
             file_path: self.file_path.clone(),
             source: self.source.clone(),
-            scope: AstScope {
+            scope: Rc::new(RefCell::new(AstScope {
                 parent_data: (Option::None, Option::None),
-                statements,
-            },
+                statements: Vec::new(),
+            })),
+        }));
+
+        file.borrow_mut().scope.borrow_mut().parent_data = (Option::Some(Rc::downgrade(&file.clone())), parent_data.1.clone());
+
+        let data = file.borrow().scope.borrow().parent_data.clone();
+        while self.current.kind != TokenKind::EndOfFile {
+            file.borrow_mut().scope.borrow_mut().statements.push(Rc::new(RefCell::new(self.parse_statement(data.clone()))));
         }
+
+        file
     }
 
-    fn parse_scope(&mut self) -> AstScope {
+    fn parse_scope(&mut self, parent_data: ParentData) -> Rc<RefCell<AstScope>> {
         if self.current.kind != TokenKind::LBrace {
             panic!("Expected '{{' got {:?}", self.current);
         }
         self.next_token();
 
-        let mut statements = Vec::new();
+        let scope = Rc::new(RefCell::new(AstScope {
+            parent_data: parent_data.clone(),
+            statements: Vec::new(),
+        }));
+
         while self.current.kind != TokenKind::RBrace {
-            statements.push(Rc::new(RefCell::new(self.parse_statement())));
+            scope.borrow_mut().statements.push(Rc::new(RefCell::new(self.parse_statement((parent_data.0.clone(), Option::Some(Rc::downgrade(&scope.clone())))))));
         }
 
         if self.current.kind != TokenKind::RBrace {
@@ -64,25 +71,22 @@ impl Parser {
         }
         self.next_token();
 
-        AstScope {
-            parent_data: (Option::None, Option::None),
-            statements,
-        }
+        scope
     }
 
-    fn parse_statement(&mut self) -> AstStatement {
+    fn parse_statement(&mut self, parent_data: ParentData) -> AstStatement {
         match self.current.kind {
             TokenKind::Semicolon => {
                 self.next_token();
-                self.parse_statement()
+                self.parse_statement(parent_data)
             }
 
             TokenKind::LBrace => {
-                AstStatement::Scope(Rc::new(RefCell::new(self.parse_scope())))
+                AstStatement::Scope(self.parse_scope(parent_data))
             }
 
             _ => {
-                let expression = self.parse_expression();
+                let expression = self.parse_expression(parent_data.clone());
 
                 match self.current.kind {
                     TokenKind::Colon => {
@@ -95,7 +99,7 @@ impl Parser {
                         };
 
                         let type_ = if self.current.kind != TokenKind::Colon && self.current.kind != TokenKind::Equals {
-                            Option::Some(self.parse_type())
+                            Option::Some(self.parse_type(parent_data.clone()))
                         } else {
                             Option::None
                         };
@@ -111,7 +115,7 @@ impl Parser {
                         };
 
                         let value = if self.current.kind != TokenKind::Semicolon {
-                            Option::Some(self.parse_expression())
+                            Option::Some(self.parse_expression(parent_data.clone()))
                         } else {
                             Option::None
                         };
@@ -136,7 +140,7 @@ impl Parser {
 
                         AstStatement::Declaration(Rc::new(RefCell::new(
                             AstDeclaration {
-                                parent_data: (Option::None, Option::None),
+                                parent_data: parent_data.clone(),
                                 name,
                                 type_: Rc::new(RefCell::new(type_)),
                                 value: Rc::new(RefCell::new(value)),
@@ -151,7 +155,7 @@ impl Parser {
                     TokenKind::SlashEquals |
                     TokenKind::PercentEquals => {
                         let operator = self.next_token();
-                        let right = self.parse_expression();
+                        let right = self.parse_expression(parent_data.clone());
 
                         if self.current.kind != TokenKind::Semicolon {
                             panic!("Expected ';' got {:?}", self.current);
@@ -160,7 +164,7 @@ impl Parser {
 
                         AstStatement::Assignment(Rc::new(RefCell::new(
                             AstAssignment {
-                                parent_data: (Option::None, Option::None),
+                                parent_data: parent_data.clone(),
                                 left: Rc::new(RefCell::new(expression)),
                                 operator,
                                 right: Rc::new(RefCell::new(right)),
@@ -181,12 +185,12 @@ impl Parser {
         }
     }
 
-    fn parse_type(&mut self) -> AstType {
+    fn parse_type(&mut self, parent_data: ParentData) -> AstType {
         match self.current.kind {
             TokenKind::Identifier(_) => {
                 AstType::Name(Rc::new(RefCell::new(
                     AstTypeName {
-                        parent_data: (Option::None, Option::None),
+                        parent_data: parent_data.clone(),
                         name: self.next_token()
                     }
                 )))
@@ -196,18 +200,18 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self) -> AstExpression {
-        self.parse_binary_expression(0)
+    fn parse_expression(&mut self, parent_data: ParentData) -> AstExpression {
+        self.parse_binary_expression(0, parent_data)
     }
 
-    fn parse_procedure(&mut self, first_arg_name: Option<AstName>) -> AstExpression {
+    fn parse_procedure(&mut self, first_arg_name: Option<AstName>, parent_data: ParentData) -> AstExpression {
         let arguments = if first_arg_name.is_none() {
             Vec::new()
         } else {
             let mut args = Vec::new();
 
             let first_arg_type = if self.current.kind != TokenKind::Equals {
-                Option::Some(self.parse_type())
+                Option::Some(self.parse_type(parent_data.clone()))
             } else {
                 Option::None
             };
@@ -216,7 +220,7 @@ impl Parser {
                 if self.current.kind != TokenKind::Equals {
                     panic!("Expected '=' got {:?}", self.current);
                 }
-                Option::Some(self.parse_expression())
+                Option::Some(self.parse_expression(parent_data.clone()))
             } else {
                 Option::None
             };
@@ -226,7 +230,7 @@ impl Parser {
             }
 
             args.push(Rc::new(RefCell::new(AstDeclaration {
-                parent_data: (Option::None, Option::None),
+                parent_data: parent_data.clone(),
                 name: first_arg_name.unwrap().token,
                 type_: Rc::new(RefCell::new(first_arg_type)),
                 value: Rc::new(RefCell::new(first_arg_value)),
@@ -250,7 +254,7 @@ impl Parser {
                 self.next_token();
 
                 let type_ = if self.current.kind != TokenKind::Equals {
-                    Option::Some(self.parse_type())
+                    Option::Some(self.parse_type(parent_data.clone()))
                 } else {
                     Option::None
                 };
@@ -259,7 +263,7 @@ impl Parser {
                     if self.current.kind != TokenKind::Equals {
                         panic!("Expected '=' got {:?}", self.current);
                     }
-                    Option::Some(self.parse_expression())
+                    Option::Some(self.parse_expression(parent_data.clone()))
                 } else {
                     Option::None
                 };
@@ -269,7 +273,7 @@ impl Parser {
                 }
 
                 args.push(Rc::new(RefCell::new(AstDeclaration {
-                    parent_data: (Option::None, Option::None),
+                    parent_data: parent_data.clone(),
                     name,
                     type_: Rc::new(RefCell::new(type_)),
                     value: Rc::new(RefCell::new(value)),
@@ -288,16 +292,16 @@ impl Parser {
 
         let return_type = if self.current.kind == TokenKind::RightArrow {
             self.next_token();
-            Option::Some(self.parse_type())
+            Option::Some(self.parse_type(parent_data.clone()))
         } else {
             Option::None
         };
 
-        let scope = self.parse_scope();
+        let scope = self.parse_scope(parent_data.clone());
 
         AstExpression::Procedure(Rc::new(RefCell::new(
             AstProcedure {
-                parent_data: (Option::None, Option::None),
+                parent_data: parent_data.clone(),
                 arguments,
                 return_type: Rc::new(RefCell::new(return_type)),
                 scope,
@@ -305,11 +309,11 @@ impl Parser {
         )))
     }
 
-    fn parse_primary_expression(&mut self) -> AstExpression {
+    fn parse_primary_expression(&mut self, parent_data: ParentData) -> AstExpression {
         match self.current.kind {
             TokenKind::Identifier(_) => AstExpression::Name(Rc::new(RefCell::new(
                 AstName {
-                    parent_data: (Option::None, Option::None),
+                    parent_data: parent_data.clone(),
                     token: self.next_token()
                 }
             ))),
@@ -317,7 +321,7 @@ impl Parser {
             TokenKind::Integer(_) |
             TokenKind::Float(_) => AstExpression::Literal(Rc::new(RefCell::new(
                 AstLiteral {
-                    parent_data: (Option::None, Option::None),
+                    parent_data: parent_data.clone(),
                     token: self.next_token()
                 }
             ))),
@@ -326,13 +330,13 @@ impl Parser {
                 self.next_token();
                 if self.current.kind == TokenKind::RParen {
                     self.next_token();
-                    return self.parse_procedure(Option::None);
+                    return self.parse_procedure(Option::None, parent_data.clone());
                 }
-                let expression = self.parse_expression();
+                let expression = self.parse_expression(parent_data.clone());
                 if self.current.kind == TokenKind::Colon {
                     if let AstExpression::Name(name) = expression {
                         self.next_token();
-                        return self.parse_procedure(Option::Some((*name.borrow()).clone()));
+                        return self.parse_procedure(Option::Some((*name.borrow()).clone()), parent_data.clone());
                     } else  {
                         panic!("Expected name");
                     }
@@ -369,20 +373,20 @@ impl Parser {
         }
     }
 
-    fn parse_binary_expression(&mut self, parent_precedence: u64) -> AstExpression {
+    fn parse_binary_expression(&mut self, parent_precedence: u64, parent_data: ParentData) -> AstExpression {
         let unary_precedence = Parser::unary_operator_precedence(&self.current);
         let mut left = if unary_precedence > parent_precedence {
             let operator = self.next_token();
-            let operand = self.parse_binary_expression(unary_precedence);
+            let operand = self.parse_binary_expression(unary_precedence, parent_data.clone());
             AstExpression::Unary(Rc::new(RefCell::new(
                 AstUnary {
-                    parent_data: (Option::None, Option::None),
+                    parent_data: parent_data.clone(),
                     operator,
                     operand: Rc::new(RefCell::new(operand)),
                 }
             )))
         } else {
-            self.parse_primary_expression()
+            self.parse_primary_expression(parent_data.clone())
         };
 
         loop {
@@ -392,10 +396,10 @@ impl Parser {
             }
 
             let operator = self.next_token();
-            let right = self.parse_binary_expression(precedence);
+            let right = self.parse_binary_expression(precedence, parent_data.clone());
             left = AstExpression::Binary(Rc::new(RefCell::new(
                 AstBinary {
-                    parent_data: (Option::None, Option::None),
+                    parent_data: parent_data.clone(),
                     left: Rc::new(RefCell::new(left)),
                     operator,
                     right: Rc::new(RefCell::new(right)),
