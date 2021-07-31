@@ -38,9 +38,11 @@ impl Parser {
         }
 
         AstFile {
+            parent_data: (Option::None, Option::None),
             file_path: self.file_path.clone(),
             source: self.source.clone(),
             scope: AstScope {
+                parent_data: (Option::None, Option::None),
                 statements,
             },
         }
@@ -63,6 +65,7 @@ impl Parser {
         self.next_token();
 
         AstScope {
+            parent_data: (Option::None, Option::None),
             statements,
         }
     }
@@ -133,6 +136,7 @@ impl Parser {
 
                         AstStatement::Declaration(Box::new(
                             AstDeclaration {
+                                parent_data: (Option::None, Option::None),
                                 name,
                                 type_,
                                 value,
@@ -156,6 +160,7 @@ impl Parser {
 
                         AstStatement::Assignment(Box::new(
                             AstAssignment {
+                                parent_data: (Option::None, Option::None),
                                 left: expression,
                                 operator,
                                 right,
@@ -181,6 +186,7 @@ impl Parser {
             TokenKind::Identifier(_) => {
                 AstType::Name(Box::new(
                     AstTypeName {
+                        parent_data: (Option::None, Option::None),
                         name: self.next_token()
                     }
                 ))
@@ -220,6 +226,7 @@ impl Parser {
             }
 
             args.push(AstDeclaration {
+                parent_data: (Option::None, Option::None),
                 name: first_arg_name.unwrap().token,
                 type_: first_arg_type,
                 value: first_arg_value,
@@ -262,6 +269,7 @@ impl Parser {
                 }
 
                 args.push(AstDeclaration {
+                    parent_data: (Option::None, Option::None),
                     name,
                     type_,
                     value,
@@ -289,6 +297,7 @@ impl Parser {
 
         AstExpression::Procedure(Box::new(
             AstProcedure {
+                parent_data: (Option::None, Option::None),
                 arguments,
                 return_type,
                 scope,
@@ -300,6 +309,7 @@ impl Parser {
         match self.current.kind {
             TokenKind::Identifier(_) => AstExpression::Name(Box::new(
                 AstName {
+                    parent_data: (Option::None, Option::None),
                     token: self.next_token()
                 }
             )),
@@ -307,6 +317,7 @@ impl Parser {
             TokenKind::Integer(_) |
             TokenKind::Float(_) => AstExpression::Literal(Box::new(
                 AstLiteral {
+                    parent_data: (Option::None, Option::None),
                     token: self.next_token()
                 }
             )),
@@ -365,6 +376,7 @@ impl Parser {
             let operand = self.parse_binary_expression(unary_precedence);
             AstExpression::Unary(Box::new(
                 AstUnary {
+                    parent_data: (Option::None, Option::None),
                     operator,
                     operand,
                 }
@@ -383,6 +395,7 @@ impl Parser {
             let right = self.parse_binary_expression(precedence);
             left = AstExpression::Binary(Box::new(
                 AstBinary {
+                    parent_data: (Option::None, Option::None),
                     left,
                     operator,
                     right,
