@@ -27,14 +27,14 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Ast {
-        Ast::File(Box::new(self.parse_file()))
+        Ast::File(Rc::new(RefCell::new(self.parse_file())))
     }
 
     fn parse_file(&mut self) -> AstFile {
         let mut statements = Vec::new();
 
         while self.current.kind != TokenKind::EndOfFile {
-            statements.push(self.parse_statement());
+            statements.push(Rc::new(RefCell::new(self.parse_statement())));
         }
 
         AstFile {
@@ -56,7 +56,7 @@ impl Parser {
 
         let mut statements = Vec::new();
         while self.current.kind != TokenKind::RBrace {
-            statements.push(self.parse_statement());
+            statements.push(Rc::new(RefCell::new(self.parse_statement())));
         }
 
         if self.current.kind != TokenKind::RBrace {
@@ -78,7 +78,7 @@ impl Parser {
             }
 
             TokenKind::LBrace => {
-                AstStatement::Scope(Box::new(self.parse_scope()))
+                AstStatement::Scope(Rc::new(RefCell::new(self.parse_scope())))
             }
 
             _ => {
@@ -89,7 +89,7 @@ impl Parser {
                         self.next_token();
 
                         let name = if let AstExpression::Name(token) = expression {
-                            token.token
+                            token.borrow().token.clone()
                         } else {
                             panic!("Expected name before ':'");
                         };
@@ -134,15 +134,15 @@ impl Parser {
                             panic!("Cannot have a declaration with nether type nor value");
                         }
 
-                        AstStatement::Declaration(Box::new(
+                        AstStatement::Declaration(Rc::new(RefCell::new(
                             AstDeclaration {
                                 parent_data: (Option::None, Option::None),
                                 name,
-                                type_,
-                                value,
+                                type_: Rc::new(RefCell::new(type_)),
+                                value: Rc::new(RefCell::new(value)),
                                 constant,
                             }
-                        ))
+                        )))
                     }
 
                     TokenKind::PlusEquals |
@@ -158,14 +158,14 @@ impl Parser {
                         }
                         self.next_token();
 
-                        AstStatement::Assignment(Box::new(
+                        AstStatement::Assignment(Rc::new(RefCell::new(
                             AstAssignment {
                                 parent_data: (Option::None, Option::None),
-                                left: expression,
+                                left: Rc::new(RefCell::new(expression)),
                                 operator,
-                                right,
+                                right: Rc::new(RefCell::new(right)),
                             }
-                        ))
+                        )))
                     }
 
                     _ => {
@@ -174,7 +174,7 @@ impl Parser {
                         }
                         self.next_token();
 
-                        AstStatement::Expression(Box::from(expression))
+                        AstStatement::Expression(Rc::new(RefCell::new(expression)))
                     },
                 }
             }
@@ -184,12 +184,12 @@ impl Parser {
     fn parse_type(&mut self) -> AstType {
         match self.current.kind {
             TokenKind::Identifier(_) => {
-                AstType::Name(Box::new(
+                AstType::Name(Rc::new(RefCell::new(
                     AstTypeName {
                         parent_data: (Option::None, Option::None),
                         name: self.next_token()
                     }
-                ))
+                )))
             }
 
             _ => panic!("Unexpected {:?}", self.current),
@@ -225,13 +225,13 @@ impl Parser {
                 panic!("Cannot have a procedure argument with nether type nor value");
             }
 
-            args.push(AstDeclaration {
+            args.push(Rc::new(RefCell::new(AstDeclaration {
                 parent_data: (Option::None, Option::None),
                 name: first_arg_name.unwrap().token,
-                type_: first_arg_type,
-                value: first_arg_value,
+                type_: Rc::new(RefCell::new(first_arg_type)),
+                value: Rc::new(RefCell::new(first_arg_value)),
                 constant: false,
-            });
+            })));
 
             while self.current.kind != TokenKind::RParen {
                 if self.current.kind != TokenKind::Comma {
@@ -268,13 +268,13 @@ impl Parser {
                     panic!("Cannot have a procedure argument with nether type nor value");
                 }
 
-                args.push(AstDeclaration {
+                args.push(Rc::new(RefCell::new(AstDeclaration {
                     parent_data: (Option::None, Option::None),
                     name,
-                    type_,
-                    value,
+                    type_: Rc::new(RefCell::new(type_)),
+                    value: Rc::new(RefCell::new(value)),
                     constant: false,
-                });
+                })));
             }
 
             if self.current.kind != TokenKind::RParen {
@@ -295,32 +295,32 @@ impl Parser {
 
         let scope = self.parse_scope();
 
-        AstExpression::Procedure(Box::new(
+        AstExpression::Procedure(Rc::new(RefCell::new(
             AstProcedure {
                 parent_data: (Option::None, Option::None),
                 arguments,
-                return_type,
+                return_type: Rc::new(RefCell::new(return_type)),
                 scope,
             }
-        ))
+        )))
     }
 
     fn parse_primary_expression(&mut self) -> AstExpression {
         match self.current.kind {
-            TokenKind::Identifier(_) => AstExpression::Name(Box::new(
+            TokenKind::Identifier(_) => AstExpression::Name(Rc::new(RefCell::new(
                 AstName {
                     parent_data: (Option::None, Option::None),
                     token: self.next_token()
                 }
-            )),
+            ))),
 
             TokenKind::Integer(_) |
-            TokenKind::Float(_) => AstExpression::Literal(Box::new(
+            TokenKind::Float(_) => AstExpression::Literal(Rc::new(RefCell::new(
                 AstLiteral {
                     parent_data: (Option::None, Option::None),
                     token: self.next_token()
                 }
-            )),
+            ))),
 
             TokenKind::LParen => {
                 self.next_token();
@@ -332,7 +332,7 @@ impl Parser {
                 if self.current.kind == TokenKind::Colon {
                     if let AstExpression::Name(name) = expression {
                         self.next_token();
-                        return self.parse_procedure(Option::Some(*name));
+                        return self.parse_procedure(Option::Some((*name.borrow()).clone()));
                     } else  {
                         panic!("Expected name");
                     }
@@ -374,13 +374,13 @@ impl Parser {
         let mut left = if unary_precedence > parent_precedence {
             let operator = self.next_token();
             let operand = self.parse_binary_expression(unary_precedence);
-            AstExpression::Unary(Box::new(
+            AstExpression::Unary(Rc::new(RefCell::new(
                 AstUnary {
                     parent_data: (Option::None, Option::None),
                     operator,
-                    operand,
+                    operand: Rc::new(RefCell::new(operand)),
                 }
-            ))
+            )))
         } else {
             self.parse_primary_expression()
         };
@@ -393,14 +393,14 @@ impl Parser {
 
             let operator = self.next_token();
             let right = self.parse_binary_expression(precedence);
-            left = AstExpression::Binary(Box::new(
+            left = AstExpression::Binary(Rc::new(RefCell::new(
                 AstBinary {
                     parent_data: (Option::None, Option::None),
-                    left,
+                    left: Rc::new(RefCell::new(left)),
                     operator,
-                    right,
+                    right: Rc::new(RefCell::new(right)),
                 }
-            ));
+            )));
         }
 
         left
