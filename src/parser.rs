@@ -44,7 +44,7 @@ impl Parser {
 
     fn parse_scope(&mut self) -> AstScope {
         if self.current.kind != TokenKind::LBrace {
-            panic!("Expected '{{' got {:?}", self.current.kind);
+            panic!("Expected '{{' got {:?}", self.current);
         }
         self.next_token();
 
@@ -54,7 +54,7 @@ impl Parser {
         }
 
         if self.current.kind != TokenKind::RBrace {
-            panic!("Expected '}}' got {:?}", self.current.kind);
+            panic!("Expected '}}' got {:?}", self.current);
         }
         self.next_token();
 
@@ -100,7 +100,7 @@ impl Parser {
                             self.next_token();
                             true
                         } else {
-                            panic!("Expected ':' or '=' got {:?}", self.current.kind);
+                            panic!("Expected ':' or '=' got {:?}", self.current);
                         };
 
                         let value = if self.current.kind != TokenKind::Semicolon {
@@ -112,13 +112,13 @@ impl Parser {
                         if let Option::Some(expression) = &value {
                             if !matches!(expression, AstExpression::Procedure(_)) {
                                 if self.current.kind != TokenKind::Semicolon {
-                                    panic!("Expected ';' got {:?}", self.current.kind);
+                                    panic!("Expected ';' got {:?}", self.current);
                                 }
                                 self.next_token();
                             }
                         } else {
                             if self.current.kind != TokenKind::Semicolon {
-                                panic!("Expected ';' got {:?}", self.current.kind);
+                                panic!("Expected ';' got {:?}", self.current);
                             }
                             self.next_token();
                         }
@@ -146,7 +146,7 @@ impl Parser {
                         let right = self.parse_expression();
 
                         if self.current.kind != TokenKind::Semicolon {
-                            panic!("Expected ';' got {:?}", self.current.kind);
+                            panic!("Expected ';' got {:?}", self.current);
                         }
                         self.next_token();
 
@@ -161,7 +161,7 @@ impl Parser {
 
                     _ => {
                         if self.current.kind != TokenKind::Semicolon {
-                            panic!("Expected ';' got {:?}", self.current.kind);
+                            panic!("Expected ';' got {:?}", self.current);
                         }
                         self.next_token();
 
@@ -182,7 +182,7 @@ impl Parser {
                 ))
             }
 
-            _ => panic!("Unexpected {:?}", self.current.kind),
+            _ => panic!("Unexpected {:?}", self.current),
         }
     }
 
@@ -204,7 +204,7 @@ impl Parser {
 
             let first_arg_value = if self.current.kind != TokenKind::Comma && self.current.kind != TokenKind::RParen {
                 if self.current.kind != TokenKind::Equals {
-                    panic!("Expected '=' got {:?}", self.current.kind);
+                    panic!("Expected '=' got {:?}", self.current);
                 }
                 Option::Some(self.parse_expression())
             } else {
@@ -230,11 +230,11 @@ impl Parser {
 
                 let name = self.next_token();
                 if !matches!(name.kind, TokenKind::Identifier(_)) {
-                    panic!("Expected name got {:?}", name.kind);
+                    panic!("Expected name got {:?}", name);
                 }
 
                 if self.current.kind != TokenKind::Colon {
-                    panic!("Expected ':' got {:?}", self.current.kind);
+                    panic!("Expected ':' got {:?}", self.current);
                 }
                 self.next_token();
 
@@ -246,7 +246,7 @@ impl Parser {
 
                 let value = if self.current.kind != TokenKind::Comma {
                     if self.current.kind != TokenKind::Equals {
-                        panic!("Expected '=' got {:?}", self.current.kind);
+                        panic!("Expected '=' got {:?}", self.current);
                     }
                     Option::Some(self.parse_expression())
                 } else {
@@ -266,7 +266,7 @@ impl Parser {
             }
 
             if self.current.kind != TokenKind::RParen {
-                panic!("Expected ')' got {:?}", self.current.kind);
+                panic!("Expected ')' got {:?}", self.current);
             } else {
                 self.next_token();
             }
@@ -322,13 +322,13 @@ impl Parser {
                         panic!("Expected name");
                     }
                 } else if self.current.kind != TokenKind::RParen {
-                    panic!("Expected '(' got {:?}", self.current.kind);
+                    panic!("Expected '(' got {:?}", self.current);
                 }
                 self.next_token();
                 expression
             }
 
-            _ => panic!("Unexpected token {:?}", self.current.kind),
+            _ => panic!("Unexpected token {:?}", self.current),
         }
     }
 
