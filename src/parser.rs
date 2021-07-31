@@ -26,7 +26,11 @@ impl Parser {
         token
     }
 
-    pub fn parse_file(&mut self) -> AstFile {
+    pub fn parse(&mut self) -> Ast {
+        Ast::File(Box::new(self.parse_file()))
+    }
+
+    fn parse_file(&mut self) -> AstFile {
         let mut statements = Vec::new();
 
         while self.current.kind != TokenKind::EndOfFile {

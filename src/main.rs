@@ -3,7 +3,7 @@ mod lexer;
 mod ast;
 mod parser;
 
-// use crate::lexer::*;
+use crate::lexer::*;
 use crate::parser::*;
 
 fn main() {
@@ -15,8 +15,6 @@ fn main() {
         return;
     }
 
-
-    /*
     let source = std::fs::read_to_string(&args[1]).expect("Unable to open file!");
     let mut lexer = Lexer::new(source);
     loop {
@@ -25,14 +23,13 @@ fn main() {
         println!("{:?}", token);
 
         match token.kind {
-            TokenKind::Error(message) => panic!(message),
+            TokenKind::Error(_) => panic!("Error: {:?}", token),
             TokenKind::EndOfFile => break,
             _ => {}
         }
     }
-    */
 
     let mut parser = Parser::new(&args[1]);
-    let file_ast = parser.parse_file();
+    let file_ast = parser.parse();
     println!("{:#?}", file_ast);
 }

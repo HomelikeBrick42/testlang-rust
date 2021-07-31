@@ -1,5 +1,6 @@
 pub use crate::token::*;
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum Ast {
     File(Box<AstFile>),
