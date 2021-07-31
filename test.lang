@@ -1,4 +1,4 @@
-main :: () -> void {
-    a: int = 5;
+main :: (arg: int) -> void {
+    a: int = 1 + 2 * 3;
     a += -7;
 }

@@ -10,11 +10,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5232581c-8ede-44bf-9e66-8a0beabfe76d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/lexer.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/token.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test.lang" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/lang.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/lang.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ast.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/parser.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lexer.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lexer.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -100,7 +99,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1627625081201</updated>
-      <workItem from="1627625084027" duration="16177000" />
+      <workItem from="1627625084027" duration="30058000" />
     </task>
     <servers />
   </component>

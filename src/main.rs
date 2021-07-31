@@ -1,7 +1,10 @@
 mod token;
 mod lexer;
+mod ast;
+mod parser;
 
-use crate::lexer::*;
+// use crate::lexer::*;
+use crate::parser::*;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -12,8 +15,9 @@ fn main() {
         return;
     }
 
-    let source = std::fs::read_to_string(&args[1]).expect("Unable to open file!");
 
+    /*
+    let source = std::fs::read_to_string(&args[1]).expect("Unable to open file!");
     let mut lexer = Lexer::new(source);
     loop {
         let token = lexer.next_token();
@@ -26,4 +30,9 @@ fn main() {
             _ => {}
         }
     }
+    */
+
+    let mut parser = Parser::new(&args[1]);
+    let file_ast = parser.parse_file();
+    println!("{:#?}", file_ast);
 }

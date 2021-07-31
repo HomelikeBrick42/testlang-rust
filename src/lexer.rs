@@ -99,7 +99,7 @@ impl Lexer {
 
                 ' ' | '\n' | '\r' | '\t' => {
                     self.next_char();
-                    continue
+                    continue;
                 }
 
                 // TODO: Allow any utf8 letter?
@@ -219,7 +219,7 @@ impl Lexer {
 
                                         '_' => {
                                             self.next_char();
-                                            continue
+                                            continue;
                                         }
 
                                         _ => break,
@@ -231,7 +231,7 @@ impl Lexer {
 
                             '_' => {
                                 self.next_char();
-                                continue
+                                continue;
                             }
 
                             _ => break,
