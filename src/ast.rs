@@ -96,11 +96,5 @@ pub struct AstBinary {
 
 #[derive(Clone, Debug)]
 pub enum AstType {
-    Name(Rc<RefCell<AstTypeName>>),
-}
-
-#[derive(Clone, Debug)]
-pub struct AstTypeName {
-    pub parent_data: ParentData,
-    pub name: Token,
+    Name(Rc<RefCell<AstName>>),
 }

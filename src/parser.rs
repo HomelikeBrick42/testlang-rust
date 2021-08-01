@@ -10,7 +10,12 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(path: &str) -> Parser {
-        let source = std::fs::read_to_string(path).expect("Unable to open file!");
+        let source = if let Ok(source) = std::fs::read_to_string(path) {
+            source
+        } else {
+            panic!("Unable to open '{}'", path);
+        };
+
         let mut lexer = Lexer::new(source.clone());
         Parser {
             file_path: String::from(path),
@@ -26,8 +31,8 @@ impl Parser {
         token
     }
 
-    pub fn parse(&mut self) -> Ast {
-        Ast::File(self.parse_file((Option::None, Option::None)))
+    pub fn parse(&mut self) -> Rc<RefCell<Ast>> {
+        Rc::new(RefCell::new(Ast::File(self.parse_file((Option::None, Option::None)))))
     }
 
     fn parse_file(&mut self, parent_data: ParentData) -> Rc<RefCell<AstFile>> {
@@ -189,9 +194,9 @@ impl Parser {
         match self.current.kind {
             TokenKind::Identifier(_) => {
                 AstType::Name(Rc::new(RefCell::new(
-                    AstTypeName {
+                    AstName {
                         parent_data: parent_data.clone(),
-                        name: self.next_token()
+                        token: self.next_token()
                     }
                 )))
             }

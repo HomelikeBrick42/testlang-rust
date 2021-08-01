@@ -15,7 +15,12 @@ fn main() {
         return;
     }
 
-    let source = std::fs::read_to_string(&args[1]).expect("Unable to open file!");
+    let source = if let Ok(source) = std::fs::read_to_string(&args[1]) {
+        source
+    } else {
+        panic!("Unable to open '{}'", args[1]);
+    };
+
     let mut lexer = Lexer::new(source);
     loop {
         let token = lexer.next_token();
